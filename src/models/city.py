@@ -11,7 +11,7 @@ class City(Base):
     __tablename__ = 'city'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String, unique=True, nullable=False, index=True)
 
     @property
     def weather(self) -> str:
