@@ -8,7 +8,8 @@ from sqlalchemy.orm import sessionmaker
 from src.config import settings
 
 engine = create_engine(
-    settings.SQLALCHEMY_DATABASE_URI
+    settings.SQLALCHEMY_DATABASE_URI,
+    connect_args={"check_same_thread": False}
 )
 SessionLocal: Any = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -18,6 +19,3 @@ SessionLocal: Any = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 class Base:
     id: Any
     __name__: str
-
-
-Base.metadata.create_all(bind=engine)
