@@ -5,7 +5,10 @@ from starlette.config import Config
 
 
 class Settings(BaseSettings):
-    SQLALCHEMY_DATABASE_URI: str
+    DB_USER: str
+    DB_PASSWORD: str
+    DB_HOST: str
+    DB_NAME: str
     WEATHER_API_KEY: str
 
     class Config:
