@@ -1,11 +1,12 @@
 import datetime as dt
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 
 from src.db.database import SessionLocal
 from src.models.city import City
 from src.models.picnic import Picnic, PicnicRegistration
+from src.schemas.picnic import PicnicCreateRequest
 
 router: Any = APIRouter(
     tags=["picnic"],
@@ -40,16 +41,20 @@ def all_picnics(datetime: dt.datetime = Query(default=None, description='Вре�
     } for pic in picnics]
 
 
-@router.get('/picnic-add/', summary='Picnic Add', tags=['picnic'])
-def picnic_add(city_id: int = None, datetime: dt.datetime = None):
-    p = Picnic(city_id=city_id, time=datetime)
+@router.post('/picnic-add/', summary='Picnic Add', tags=['picnic'])
+def picnic_add(picnic: PicnicCreateRequest):
+    city = SessionLocal().query(City).filter(City.id == picnic.city_id).first()
+    if not city:
+        raise HTTPException(status_code=400, detail='Город с таким идентификатором не существует')
+
+    p = Picnic(city_id=picnic.city_id, time=picnic.time)
     s = SessionLocal()
     s.add(p)
     s.commit()
 
     return {
         'id': p.id,
-        'city': SessionLocal().query(City).filter(City.id == p.id).first().name,
+        'city': city.name,
         'time': p.time,
     }
 
