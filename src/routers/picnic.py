@@ -6,7 +6,8 @@ from fastapi import APIRouter, Query, HTTPException
 from src.db.database import SessionLocal
 from src.models.city import City
 from src.models.picnic import Picnic, PicnicRegistration
-from src.schemas.picnic import PicnicCreateRequest
+from src.models.user import User
+from src.schemas.picnic import PicnicCreateRequest, PicnicRegisterRequest
 
 router: Any = APIRouter(
     tags=["picnic"],
@@ -59,11 +60,21 @@ def picnic_add(picnic: PicnicCreateRequest):
     }
 
 
-@router.get('/picnic-register/', summary='Picnic Registration', tags=['picnic'])
-def register_to_picnic(*_, **__, ):
-    """
-    Регистрация пользователя на пикник
-    (Этот эндпойнт необходимо реализовать в процессе выполнения тестового задания)
-    """
-    # TODO: Сделать логику
-    return ...
+@router.post('/picnic-register/', summary='Picnic Registration', tags=['picnic'])
+def register_to_picnic(picnic_register: PicnicRegisterRequest):
+    """Регистрация пользователя на пикник"""
+
+    user = SessionLocal().query(User).filter(User.id == picnic_register.user_id).first()
+    if not user:
+        raise HTTPException(status_code=400, detail='Пользователь с таким идентификатором не существует')
+    if not SessionLocal().query(Picnic).filter(Picnic.id == picnic_register.picnic_id).first():
+        raise HTTPException(status_code=400, detail='Пикник с таким идентификатором не существует')
+    picnic_reg = PicnicRegistration(user_id=picnic_register.user_id, picnic_id=picnic_register.picnic_id)
+    s = SessionLocal()
+    s.add(picnic_reg)
+    s.commit()
+    return {
+        'id': picnic_reg.id,
+        'user': f"{user.surname} {user.name}",
+        'picnic': picnic_register.picnic_id,
+    }
