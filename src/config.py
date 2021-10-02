@@ -16,4 +16,4 @@ class Settings(BaseSettings):
 
 
 settings: Any = Settings()
-config: str = Config(".envs")
+config: str = Config("src/.envs/.env")
