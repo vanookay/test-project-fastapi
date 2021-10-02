@@ -1,51 +1,32 @@
-from typing import Any
+from typing import Any, List, Optional
 
-from fastapi import APIRouter, Query, HTTPException
-from sqlalchemy import func
+from fastapi import APIRouter, Query, Depends, status
+from sqlalchemy.orm import Session
 
-from src.db.database import SessionLocal
-from src.models.user import User
-from src.schemas.user import UserModel, RegisterUserRequest
+from src.schemas.user import Users, UserCreate, User
+from src.services.general import get_db
+from src.services.users import create_user, get_users
 
-router: Any = APIRouter(
-    tags=["user"],
-    responses={404: {"Description": "Not found"}},
-)
+router: Any = APIRouter(tags=["users"])
 
 
-@router.post('/users-list/', summary='')
-def users_list(filter_by: str = Query(description="Фильтр (max_age, min_age)", default=None)):
+@router.get('/users/', summary='Get users list', response_model=List[Users])
+def users_list(
+        db: Session = Depends(get_db),
+        min_age: Optional[int] = Query(description="Минимальный возраст", default=None, ge=0),
+        max_age: Optional[int] = Query(description="Максимальный возраст", default=None, le=150)
+) -> List:
     """
     Список пользователей
     """
-    if filter_by:
-        # Есть риск, что лежит большой массив данных, используется подзапрос
-        if filter_by == 'max_age':
-            sub_query = SessionLocal().query(func.max(User.age)).scalar_subquery()
-        elif filter_by == 'min_age':
-            sub_query = SessionLocal().query(func.min(User.age)).scalar_subquery()
-        else:
-            raise HTTPException(status_code=400, detail='Данный фильтр не определен')
-        users = SessionLocal().query(User).filter(User.age == sub_query)
-    else:
-        users = SessionLocal().query(User).all()
 
-    return [{
-        'id': user.id,
-        'name': user.name,
-        'surname': user.surname,
-        'age': user.age,
-    } for user in users]
+    return get_users(db=db, min_age=min_age, max_age=max_age)
 
 
-@router.post('/register-user/', summary='CreateUser', response_model=UserModel)
-def register_user(user: RegisterUserRequest):
+@router.post('/users/', summary='Create a user', response_model=User, status_code=status.HTTP_201_CREATED)
+def register_user(user: UserCreate, db: Session = Depends(get_db)) -> Any:
     """
     Регистрация пользователя
     """
-    user_object = User(**user.dict())
-    s = SessionLocal()
-    s.add(user_object)
-    s.commit()
 
-    return UserModel.from_orm(user_object)
+    return create_user(db=db, user=user)
