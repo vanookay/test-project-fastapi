@@ -17,7 +17,7 @@ def users_list(
         max_age: Optional[int] = Query(description="Максимальный возраст", default=None, le=150)
 ) -> List:
     """
-    Список пользователей
+    Получение списка пользователей
     """
 
     return get_users(db=db, min_age=min_age, max_age=max_age)

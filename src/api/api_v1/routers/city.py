@@ -23,7 +23,7 @@ def cities_list(
         q: str = Query(description="Название города", default=None)
 ) -> List:
     """
-    Получение списка городов
+    Получение списка городов с текущей температурой
     """
 
     return get_cities(db=db, q=q)
