@@ -22,6 +22,18 @@ def get_by_id(db: Session, user_id: int):
 
 
 def get_users(db: Session, min_age: Optional[int], max_age: Optional[int]) -> list:
+    """Получение списка пользователей из БД
+
+    Args:
+        db: Сессия БД
+        min_age: Фильтр минимального возраста
+        max_age: Фильтр максимального возраста
+
+    Returns:
+        Список пользователей
+
+    """
+
     users = db.query(User)
     if min_age:
         users = users.filter(User.age >= min_age)
@@ -31,6 +43,17 @@ def get_users(db: Session, min_age: Optional[int], max_age: Optional[int]) -> li
 
 
 def create_user(db: Session, user: UserCreate):
+    """Создание записи пользователя в БД
+
+    Args:
+        db: Сессия БД
+        user: Схема создания пользователя
+
+    Returns:
+        Запись пользователя в БД
+
+    """
+
     user_data = user.dict()
     user_post = User(**user_data)
     db.add(user_post)
