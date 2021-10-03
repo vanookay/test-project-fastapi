@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 from src.db.database import Base
-from src.models.city import City
 
 
 class Picnic(Base):
@@ -16,7 +15,6 @@ class Picnic(Base):
     time = Column(DateTime, nullable=False)
 
     city = relationship('City', backref='picnics')
-
 
     def __repr__(self):
         return f'<Пикник {self.id}>'

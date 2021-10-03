@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String
 
 from src.db.database import Base
-from src.services.external_requests import GetWeatherRequest
+from src.services.external_requests import CityWeatherApi
 
 
 class City(Base):
@@ -18,7 +18,7 @@ class City(Base):
         """
         Возвращает текущую погоду в этом городе
         """
-        r = GetWeatherRequest()
+        r = CityWeatherApi()
         weather = r.get_weather(self.name)
         return weather
 

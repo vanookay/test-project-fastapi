@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.models.city import City
 from src.schemas.city import CityCreate
-from src.services.external_requests import CheckCityExisting
+from src.services.external_requests import CityWeatherApi
 
 
 def get_by_id(db: Session, city_id: int):
@@ -48,7 +48,7 @@ def check_existing(name: str) -> bool:
 
     """
 
-    check = CheckCityExisting()
+    check = CityWeatherApi()
     return check.check_existing(city=name)
 
 

@@ -1,20 +1,22 @@
-import requests
+from requests import HTTPError
 
 from src.config import settings
+from src.services.general import Client
 
 WEATHER_API_KEY = settings.WEATHER_API_KEY
 
 
-class GetWeatherRequest():
+class CityWeatherApi:
     """
-    Выполняет запрос на получение текущей погоды для города
+    Класс для работы с запросами сервиса api.openweathermap.org
     """
 
     def __init__(self):
         """
         Инициализирует класс
         """
-        self.session = requests.Session()
+        self.client = Client()
+        self.base_url = 'https://api.openweathermap.org'
 
     def get_weather_url(self, city):
         """
@@ -24,24 +26,13 @@ class GetWeatherRequest():
         Returns:
 
         """
-        url = 'https://api.openweathermap.org/data/2.5/weather'
+
+        url = f'{self.base_url}/data/2.5/weather'
         url += '?units=metric'
         url += '&q=' + city
         url += '&appid=' + WEATHER_API_KEY
+
         return url
-
-    def send_request(self, url):
-        """
-        Отправляет запрос на сервер
-        Args:
-            url: Адрес запроса
-        Returns:
-
-        """
-        r = self.session.get(url)
-        if r.status_code != 200:
-            r.raise_for_status()
-        return r
 
     def get_weather_from_response(self, response):
         """
@@ -51,7 +42,9 @@ class GetWeatherRequest():
         Returns:
 
         """
+
         data = response.json()
+
         return data['main']['temp']
 
     def get_weather(self, city):
@@ -62,50 +55,15 @@ class GetWeatherRequest():
         Returns:
 
         """
+
         url = self.get_weather_url(city)
-        r = self.send_request(url)
+        r = self.client.send_request(method=Client.GET, url=url)
+
         if r is None:
             return None
         else:
             weather = self.get_weather_from_response(r)
             return weather
-
-
-class CheckCityExisting():
-    """
-    Проверка наличия города (запросом к серверу погоды)
-    """
-
-    def __init__(self):
-        """
-        Инициализирует класс
-        """
-        self.session = requests.Session()
-
-    def get_weather_url(self, city):
-        """
-        Генерирует url включая в него необходимые параметры
-        Args:
-            city: Город
-        Returns:
-
-        """
-        url = 'https://api.openweathermap.org/data/2.5/weather'
-        url += '?units=metric'
-        url += '&q=' + city
-        url += '&appid=' + WEATHER_API_KEY
-        return url
-
-    def send_request(self, url):
-        """
-        Отправляет запрос на сервер
-        Args:
-            url: Адрес запроса
-        Returns:
-
-        """
-        r = self.session.get(url)
-        return r
 
     def check_existing(self, city):
         """
@@ -115,9 +73,12 @@ class CheckCityExisting():
         Returns:
 
         """
+
         url = self.get_weather_url(city)
-        r = self.send_request(url)
-        if r.status_code == 404:
+
+        try:
+            self.client.send_request(method=Client.GET, url=url)
+        except HTTPError:
             return False
-        if r.status_code == 200:
-            return True
+
+        return True
