@@ -7,6 +7,21 @@ from src.schemas.city import CityCreate
 from src.services.external_requests import CheckCityExisting
 
 
+def get_by_id(db: Session, city_id: int):
+    """Получение города по идентификатору из БД
+
+    Args:
+        db: Сессия БД
+        city_id: Идентификатор города
+
+    Returns:
+        Query города
+
+    """
+
+    return db.query(City).filter(City.id == city_id).first()
+
+
 def get_by_name(db: Session, name: str):
     """Получение города по наименованию из БД
 

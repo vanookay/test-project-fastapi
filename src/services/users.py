@@ -6,6 +6,21 @@ from src.models.user import User
 from src.schemas.user import UserCreate
 
 
+def get_by_id(db: Session, user_id: int):
+    """Получение пользователя по идентификатору из БД
+
+    Args:
+        db: Сессия БД
+        user_id: Идентификатор пользователя
+
+    Returns:
+        Query пользователя
+
+    """
+
+    return db.query(User).filter(User.id == user_id).first()
+
+
 def get_users(db: Session, min_age: Optional[int], max_age: Optional[int]) -> list:
     users = db.query(User)
     if min_age:
