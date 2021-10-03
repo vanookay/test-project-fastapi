@@ -1,80 +1,78 @@
 import datetime as dt
-from typing import Any
+from typing import Any, List
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
+from sqlalchemy.orm import Session
 
-from src.db.database import SessionLocal
-from src.models.city import City
-from src.models.picnic import Picnic, PicnicRegistration
-from src.models.user import User
-from src.schemas.picnic import PicnicCreateRequest, PicnicRegisterRequest
+from src.schemas.picnic import PicnicCreate, PicnicRegister, Picnics, PicnicResponse, PicnicRegisterResponse
+from src.services.city import get_by_id as get_city_by_id
+from src.services.general import get_db
+from src.services.picnic import get_picnics, create_picnic, get_by_id as get_picnic_by_id, create_picnic_registration, \
+    get_by_user_and_picnic
+from src.services.users import get_by_id as get_user_by_id
 
 router: Any = APIRouter(
     tags=["picnic"],
-    responses={404: {"Description": "Not found"}},
+    responses={
+        404: {"Description": "Не найдено"}
+    },
 )
 
 
-@router.get('/all-picnics/', summary='All Picnics', tags=['picnic'])
-def all_picnics(datetime: dt.datetime = Query(default=None, description='Время пикника (по умолчанию не задано)'),
-                past: bool = Query(default=True, description='Включая уже прошедшие пикники')):
+@router.get('/picnic/', summary='All Picnics', tags=['picnic'], response_model=List[Picnics])
+def all_picnics(
+        db: Session = Depends(get_db),
+        datetime: dt.datetime = Query(default=None, description='Время пикника (по умолчанию не задано)'),
+        past: bool = Query(default=True, description='Включая уже прошедшие пикники')
+) -> List:
     """
     Список всех пикников
     """
-    picnics = SessionLocal().query(Picnic)
-    if datetime is not None:
-        picnics = picnics.filter(Picnic.time == datetime)
-    if not past:
-        picnics = picnics.filter(Picnic.time >= dt.datetime.now())
 
-    return [{
-        'id': pic.id,
-        'city': SessionLocal().query(City).filter(City.id == pic.id).first().name,
-        'time': pic.time,
-        'users': [
-            {
-                'id': pr.user.id,
-                'name': pr.user.name,
-                'surname': pr.user.surname,
-                'age': pr.user.age,
-            }
-            for pr in SessionLocal().query(PicnicRegistration).filter(PicnicRegistration.picnic_id == pic.id)],
-    } for pic in picnics]
+    return get_picnics(db=db, datetime=datetime, past=past)
 
 
-@router.post('/picnic-add/', summary='Picnic Add', tags=['picnic'])
-def picnic_add(picnic: PicnicCreateRequest):
-    city = SessionLocal().query(City).filter(City.id == picnic.city_id).first()
+@router.post('/picnic/', summary='Picnic Add', tags=['picnic'], response_model=PicnicResponse)
+def picnic_add(
+        picnic: PicnicCreate,
+        db: Session = Depends(get_db)
+) -> Any:
+    """
+    Создание пикника
+    """
+
+    # if picnic.time <= dt.datetime.now():
+    #     raise HTTPException(status_code=400, detail='Время проведения пикника не может быть меньше текущей даты')
+
+    city = get_city_by_id(db=db, city_id=picnic.city_id)
     if not city:
-        raise HTTPException(status_code=400, detail='Город с таким идентификатором не существует')
+        raise HTTPException(status_code=404, detail='Город с таким идентификатором не существует')
 
-    p = Picnic(city_id=picnic.city_id, time=picnic.time)
-    s = SessionLocal()
-    s.add(p)
-    s.commit()
-
-    return {
-        'id': p.id,
-        'city': city.name,
-        'time': p.time,
-    }
+    return create_picnic(db=db, picnic=picnic)
 
 
-@router.post('/picnic-register/', summary='Picnic Registration', tags=['picnic'])
-def register_to_picnic(picnic_register: PicnicRegisterRequest):
-    """Регистрация пользователя на пикник"""
+@router.post('/picnic/{picnic_id}/users/', summary='Picnic User Registration', tags=['picnic'],
+             response_model=PicnicRegisterResponse)
+def register_to_picnic(
+        picnic_id: int,
+        picnic_register: PicnicRegister,
+        db: Session = Depends(get_db)
+):
+    """
+    Регистрация пользователя на пикник
+    """
 
-    user = SessionLocal().query(User).filter(User.id == picnic_register.user_id).first()
-    if not user:
-        raise HTTPException(status_code=400, detail='Пользователь с таким идентификатором не существует')
-    if not SessionLocal().query(Picnic).filter(Picnic.id == picnic_register.picnic_id).first():
-        raise HTTPException(status_code=400, detail='Пикник с таким идентификатором не существует')
-    picnic_reg = PicnicRegistration(user_id=picnic_register.user_id, picnic_id=picnic_register.picnic_id)
-    s = SessionLocal()
-    s.add(picnic_reg)
-    s.commit()
-    return {
-        'id': picnic_reg.id,
-        'user': f"{user.surname} {user.name}",
-        'picnic': picnic_register.picnic_id,
-    }
+    if not get_user_by_id(db=db, user_id=picnic_register.user_id):
+        raise HTTPException(status_code=404, detail='Пользователь с таким идентификатором не существует')
+
+    picnic = get_picnic_by_id(db=db, picnic_id=picnic_id)
+    if not picnic:
+        raise HTTPException(status_code=404, detail='Пикник с таким идентификатором не существует')
+
+    if picnic.time <= dt.datetime.now():
+        raise HTTPException(status_code=400, detail='Регистрация на пикник закрыта (пикник проведен)')
+
+    if get_by_user_and_picnic(db=db, picnic_id=picnic_id, user_id=picnic_register.user_id):
+        raise HTTPException(status_code=400, detail='Пользователь уже присутствует на пикнике')
+
+    return create_picnic_registration(db=db, picnic_register=picnic_register, picnic_id=picnic_id)
