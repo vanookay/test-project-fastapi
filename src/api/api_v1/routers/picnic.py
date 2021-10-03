@@ -4,6 +4,7 @@ from typing import Any, List
 from fastapi import APIRouter, Query, HTTPException, Depends
 from sqlalchemy.orm import Session
 
+from src.config import settings
 from src.schemas.picnic import PicnicCreate, PicnicRegister, Picnics, PicnicResponse, PicnicRegisterResponse
 from src.services.city import get_by_id as get_city_by_id
 from src.services.general import get_db
@@ -26,7 +27,7 @@ def all_picnics(
         past: bool = Query(default=True, description='Включая уже прошедшие пикники')
 ) -> List:
     """
-    Список всех пикников
+    Получение списка пикников
     """
 
     return get_picnics(db=db, datetime=datetime, past=past)
@@ -41,8 +42,8 @@ def picnic_add(
     Создание пикника
     """
 
-    # if picnic.time <= dt.datetime.now():
-    #     raise HTTPException(status_code=400, detail='Время проведения пикника не может быть меньше текущей даты')
+    if picnic.time <= dt.datetime.now(settings.tzinfo):
+        raise HTTPException(status_code=400, detail='Время проведения пикника не может быть меньше текущей даты')
 
     city = get_city_by_id(db=db, city_id=picnic.city_id)
     if not city:
