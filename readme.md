@@ -7,6 +7,11 @@
 - Пользователь
 - Регистрация пользователя на пикник
 
+## Запуск проекта
+
+1. `docker-compose build`
+2. `docker-compose up`
+
 ## Запуск тестов
 
 `docker-compose run --rm backend pytest -v`
